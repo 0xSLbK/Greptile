@@ -365,4 +365,20 @@
                     while (isValidMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
                         currentPiece.y++;
                         score += 2;
-                    
+                    }
+                    updateDisplay();
+                    placePiece(currentPiece);
+                    break;
+                case 'p':
+                case 'P':
+                    isPaused = !isPaused;
+                    if (!isPaused) requestAnimationFrame(gameLoop);
+                    break;
+            }
+        });
+
+        // Start the game
+        restartGame();
+    </script>
+</body>
+</html>
