@@ -12,8 +12,5 @@ Greptile reviews 200 million lines of code every month for 1,600+ software teams
 - Press P to pause
 
 ## Play the Game
-[Click here to play Greptile!](https://0xslbk.github.io/greptile)
+[Click here to play Greptile!](https://0xSLbK.github.io/Greptile)
 
-*Replace "yourusername" and "your-repo-name" with your actual GitHub username and repository name*
-
-Built with HTML, CSS, and JavaScript.
