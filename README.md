@@ -1,4 +1,4 @@
-# Greptile Game 🦎
+# Tetris
 
 A classic Tetris-style puzzle game with a reptilian twist! 
 
