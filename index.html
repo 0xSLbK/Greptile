@@ -53,6 +53,21 @@
             width: 150px;
         }
         
+        .next-piece {
+            background: rgba(255, 255, 255, 0.2);
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        #nextCanvas {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            margin-top: 5px;
+        }
+        
         .score, .level, .lines {
             background: rgba(255, 255, 255, 0.2);
             margin: 10px 0;
@@ -104,6 +119,10 @@
         <div class="game-area">
             <canvas id="gameCanvas" width="300" height="600"></canvas>
             <div class="info-panel">
+                <div class="next-piece">
+                    <strong>Next:</strong><br>
+                    <canvas id="nextCanvas" width="80" height="80"></canvas>
+                </div>
                 <div class="score">Score: <span id="score">0</span></div>
                 <div class="level">Level: <span id="level">1</span></div>
                 <div class="lines">Lines: <span id="lines">0</span></div>
@@ -128,6 +147,8 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
         
         // Game constants
         const ROWS = 20;
@@ -196,8 +217,9 @@
             }
         ];
         
-        // Current piece
+        // Current piece and next piece
         let currentPiece = null;
+        let nextPiece = null;
         
         function createPiece() {
             const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
@@ -214,6 +236,41 @@
             ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+        
+        function drawNextPiece() {
+            nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+            
+            if (!nextPiece) return;
+            
+            const pieceWidth = nextPiece.shape[0].length;
+            const pieceHeight = nextPiece.shape.length;
+            const blockSize = 15; // Smaller blocks for preview
+            
+            // Center the piece in the preview canvas
+            const startX = (nextCanvas.width - pieceWidth * blockSize) / 2;
+            const startY = (nextCanvas.height - pieceHeight * blockSize) / 2;
+            
+            for (let y = 0; y < pieceHeight; y++) {
+                for (let x = 0; x < pieceWidth; x++) {
+                    if (nextPiece.shape[y][x]) {
+                        nextCtx.fillStyle = nextPiece.color;
+                        nextCtx.fillRect(
+                            startX + x * blockSize, 
+                            startY + y * blockSize, 
+                            blockSize, 
+                            blockSize
+                        );
+                        nextCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        nextCtx.strokeRect(
+                            startX + x * blockSize, 
+                            startY + y * blockSize, 
+                            blockSize, 
+                            blockSize
+                        );
+                    }
+                }
+            }
         }
         
         function drawBoard() {
@@ -238,6 +295,9 @@
                     }
                 }
             }
+            
+            // Draw next piece preview
+            drawNextPiece();
         }
         
         function isValidMove(piece, newX, newY, newShape) {
@@ -322,6 +382,7 @@
             gameRunning = true;
             isPaused = false;
             currentPiece = createPiece();
+            nextPiece = createPiece();
             document.getElementById('gameOver').style.display = 'none';
             updateDisplay();
             gameLoop(0);
@@ -348,7 +409,10 @@
                     } else {
                         placePiece(currentPiece);
                         clearLines();
-                        currentPiece = createPiece();
+                        
+                        // Move next piece to current and generate new next piece
+                        currentPiece = nextPiece;
+                        nextPiece = createPiece();
                         
                         if (!isValidMove(currentPiece, currentPiece.x, currentPiece.y)) {
                             gameOver();
@@ -411,6 +475,7 @@
         
         // Initialize game
         currentPiece = createPiece();
+        nextPiece = createPiece();
         updateDisplay();
         gameLoop(0);
     </script>
