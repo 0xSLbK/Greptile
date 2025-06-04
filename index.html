@@ -53,6 +53,13 @@
             width: 150px;
         }
         
+        .high-scores-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            width: 200px;
+        }
+        
         .next-piece {
             background: rgba(255, 255, 255, 0.2);
             margin: 10px 0;
@@ -76,6 +83,36 @@
             font-weight: bold;
         }
         
+        .high-scores {
+            background: rgba(255, 255, 255, 0.2);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: left;
+        }
+        
+        .high-scores h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: #ffd700;
+        }
+        
+        .high-score-entry {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .high-score-name {
+            font-weight: bold;
+            color: #00f5ff;
+        }
+        
+        .high-score-score {
+            color: #ffd700;
+        }
+        
         .controls {
             margin-top: 20px;
             font-size: 0.9em;
@@ -96,6 +133,44 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
         }
         
+        .name-entry-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+        
+        .name-entry-modal h2 {
+            margin-top: 0;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .name-input {
+            padding: 12px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            margin: 15px 0;
+            width: 200px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .name-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
         button {
             background: linear-gradient(45deg, #ff6b6b, #feca57);
             border: none;
@@ -104,12 +179,16 @@
             font-size: 16px;
             border-radius: 25px;
             cursor: pointer;
-            margin-top: 15px;
+            margin: 5px 10px;
             transition: transform 0.2s;
         }
         
         button:hover {
             transform: scale(1.05);
+        }
+        
+        .name-entry-buttons {
+            margin-top: 15px;
         }
     </style>
 </head>
@@ -117,7 +196,15 @@
     <div class="game-container">
         <h1>🦎 GREPTILE</h1>
         <div class="game-area">
-            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div class="high-scores-panel">
+                <div class="high-scores">
+                    <h3>🏆 High Scores</h3>
+                    <div id="highScoresList"></div>
+                </div>
+            </div>
+            <div>
+                <canvas id="gameCanvas" width="300" height="600"></canvas>
+            </div>
             <div class="info-panel">
                 <div class="next-piece">
                     <strong>Next:</strong><br>
@@ -144,6 +231,17 @@
         <button onclick="restartGame()">Play Again</button>
     </div>
 
+    <div class="name-entry-modal" id="nameEntryModal">
+        <h2>🎉 New High Score! 🎉</h2>
+        <p>Score: <span id="newHighScore">0</span></p>
+        <p>Enter your name:</p>
+        <input type="text" id="playerNameInput" class="name-input" maxlength="15" placeholder="Your Name">
+        <div class="name-entry-buttons">
+            <button onclick="saveHighScore()">Save Score</button>
+            <button onclick="skipHighScore()">Skip</button>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -164,6 +262,25 @@
         let lastTime = 0;
         let gameRunning = true;
         let isPaused = false;
+        
+        // High score system
+        let highScores = [];
+        const MAX_HIGH_SCORES = 10;
+        let localStorageAvailable = false;
+        
+        // Check if localStorage is available
+        function checkLocalStorage() {
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                localStorageAvailable = true;
+                return true;
+            } catch (e) {
+                localStorageAvailable = false;
+                console.log('localStorage not available, using session storage only');
+                return false;
+            }
+        }
         
         // Tetromino shapes
         const SHAPES = [
@@ -220,6 +337,115 @@
         // Current piece and next piece
         let currentPiece = null;
         let nextPiece = null;
+        
+        // High Score Functions
+        function loadHighScores() {
+            checkLocalStorage();
+            
+            if (localStorageAvailable) {
+                const saved = localStorage.getItem('greptile-high-scores');
+                if (saved) {
+                    highScores = JSON.parse(saved);
+                    displayHighScores();
+                    return;
+                }
+            }
+            
+            // Initialize with default scores (either no localStorage or no saved data)
+            highScores = [
+                {name: "GREPTILE", score: 5000},
+                {name: "PLAYER1", score: 3000},
+                {name: "TETRIS", score: 2000},
+                {name: "MASTER", score: 1500},
+                {name: "CODER", score: 1000}
+            ];
+            saveHighScoresToStorage();
+            displayHighScores();
+        }
+        
+        function saveHighScoresToStorage() {
+            if (localStorageAvailable) {
+                try {
+                    localStorage.setItem('greptile-high-scores', JSON.stringify(highScores));
+                } catch (e) {
+                    console.log('Failed to save to localStorage:', e);
+                }
+            }
+            // Note: If localStorage isn't available, scores will only persist for the session
+        }
+        
+        function displayHighScores() {
+            const list = document.getElementById('highScoresList');
+            list.innerHTML = '';
+            
+            // Add storage status indicator
+            if (!localStorageAvailable) {
+                const notice = document.createElement('div');
+                notice.style.fontSize = '0.8em';
+                notice.style.color = '#ffd700';
+                notice.style.marginBottom = '10px';
+                notice.style.fontStyle = 'italic';
+                notice.textContent = '(Session only - scores won\'t persist)';
+                list.appendChild(notice);
+            }
+            
+            highScores.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'high-score-entry';
+                div.innerHTML = `
+                    <span class="high-score-name">${entry.name}</span>
+                    <span class="high-score-score">${entry.score.toLocaleString()}</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+        
+        function isHighScore(newScore) {
+            return highScores.length < MAX_HIGH_SCORES || newScore > highScores[highScores.length - 1].score;
+        }
+        
+        function showNameEntry(newScore) {
+            document.getElementById('newHighScore').textContent = newScore.toLocaleString();
+            document.getElementById('nameEntryModal').style.display = 'block';
+            document.getElementById('playerNameInput').focus();
+            
+            // Allow Enter key to save
+            document.getElementById('playerNameInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveHighScore();
+                }
+            });
+        }
+        
+        function saveHighScore() {
+            const nameInput = document.getElementById('playerNameInput');
+            const playerName = nameInput.value.trim() || 'ANONYMOUS';
+            
+            // Add the new score
+            highScores.push({
+                name: playerName.toUpperCase(),
+                score: score
+            });
+            
+            // Sort by score (descending) and keep only top scores
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, MAX_HIGH_SCORES);
+            
+            // Save to localStorage
+            saveHighScoresToStorage();
+            displayHighScores();
+            
+            // Hide modal and show game over
+            document.getElementById('nameEntryModal').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            nameInput.value = '';
+        }
+        
+        function skipHighScore() {
+            document.getElementById('nameEntryModal').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('playerNameInput').value = '';
+        }
         
         function createPiece() {
             const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
@@ -371,7 +597,13 @@
         function gameOver() {
             gameRunning = false;
             document.getElementById('finalScore').textContent = score;
-            document.getElementById('gameOver').style.display = 'block';
+            
+            // Check if it's a high score
+            if (isHighScore(score)) {
+                showNameEntry(score);
+            } else {
+                document.getElementById('gameOver').style.display = 'block';
+            }
         }
         
         function restartGame() {
@@ -384,6 +616,7 @@
             currentPiece = createPiece();
             nextPiece = createPiece();
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('nameEntryModal').style.display = 'none';
             updateDisplay();
             gameLoop(0);
         }
@@ -474,6 +707,7 @@
         });
         
         // Initialize game
+        loadHighScores();
         currentPiece = createPiece();
         nextPiece = createPiece();
         updateDisplay();
